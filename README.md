@@ -1,5 +1,10 @@
-# cms_hospital
+# Overview
 This repository contains necessary information and code for cleaning Centers for Medicare and Medicaid Services (CMS) hospital data. 
+
+#Source
+The relevant data can be sourced at :https://data.cms.gov/provider-data/archived-data/hospitals
+
+# Variable 
 
 | Variable (concept) | 2018 varnames                                             | 2019 varnames                                             | 2020 varnames                                             | 2021 varnames                                                          | 2022 varnames                                             | 2023 varnames                                                                  | 2024 varnames                                             | 2025 varnames                          |
 |--------------------|-----------------------------------------------------------|-----------------------------------------------------------|-----------------------------------------------------------|-------------------------------------------------------------------------|-----------------------------------------------------------|-------------------------------------------------------------------------------|-----------------------------------------------------------|---------------------------------------|
