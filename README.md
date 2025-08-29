@@ -15,4 +15,4 @@ The relevant data can be sourced at https://data.cms.gov/provider-data/archived-
 | Hospital Ownership             | 01: `hospitalownership`<br>05: `hospitalownership`<br>07: `hospitalownership`<br>10: `hospitalownership`     | 03: `hospitalownership`<br>04: `hospitalownership`<br>07: `hospitalownership`<br>10: `hospitalownership`     | 01: `hospitalownership`<br>04: `hospitalownership`<br>07: ``<br>10: ``     | 01: ``<br>03: ``<br>04: ``<br>07: ``<br>10: ``     | 01: ``<br>04: ``<br>07: ``<br>10: ``     | 01: ``<br>04: ``<br>07: ``<br>10: ``<br>11: ``     | 01: ``<br>04: ``<br>07: ``<br>10: ``     | 02: ``<br>04: ``<br>08: `` |
 
 # Variable Notes
-In 2020, Hospital ID is changed to string format. Remember to destring and replace, beginning with 2020, month 1.
+In 2020, Hospital ID is changed to string format. Remember to destring and replace, beginning with 2020, month 1. It is also important to note that Hospital ID, starting with 2020, month 1, is given a leading "0" for all Hospital IDs with values less than 100,000
