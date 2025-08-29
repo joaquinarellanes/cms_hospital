@@ -1,11 +1,10 @@
-# Overview
+# Repository Overview
 This repository contains necessary information and code for cleaning Centers for Medicare and Medicaid Services (CMS) hospital data. 
 
-#Source
+# Data Source 
 The relevant data can be sourced at :https://data.cms.gov/provider-data/archived-data/hospitals
 
-# Variable 
-
+# Variable Structure 
 | Variable (concept) | 2018 varnames                                             | 2019 varnames                                             | 2020 varnames                                             | 2021 varnames                                                          | 2022 varnames                                             | 2023 varnames                                                                  | 2024 varnames                                             | 2025 varnames                          |
 |--------------------|-----------------------------------------------------------|-----------------------------------------------------------|-----------------------------------------------------------|-------------------------------------------------------------------------|-----------------------------------------------------------|-------------------------------------------------------------------------------|-----------------------------------------------------------|---------------------------------------|
 | Hospital ID        | 01: `providerid`<br>05: `providerid`<br>07: `providerid`<br>10: `` | 03: ``<br>04: ``<br>07: ``<br>10: `` | 01: ``<br>04: ``<br>07: ``<br>10: `` | 01: `hospid_2021_01`<br>03: `hospid_2021_03`<br>04: `hospid_2021_04`<br>07: `hospid_2021_07`<br>10: `hospid_2021_10` | 01: `hospid_2022_01`<br>04: `hospid_2022_04`<br>07: `hospid_2022_07`<br>10: `hospid_2022_10` | 01: `hospid_2023_01`<br>04: `hospid_2023_04`<br>07: `hospid_2023_07`<br>10: `hospid_2023_10`<br>11: `hospid_2023_11` | 01: `hospid_2024_01`<br>04: `hospid_2024_04`<br>07: `hospid_2024_07`<br>10: `hospid_2024_10` | 02: `hospid_2025_02`<br>04: `hospid_2025_04`<br>08: `hospid_2025_08` |
