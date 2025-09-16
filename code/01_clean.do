@@ -5,7 +5,7 @@
 forvalues x = 2018/2025 {
 forvalues y = 1/12 {
 if `x' == 2018 & `y' == 1 {
-import delimited 								"/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/raw/`x'/`y'_`x'/Hospital General Information.csv", clear 
+import delimited "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/raw/`x'/`y'_`x'/Hospital General Information.csv", clear 
 
 gen str6 id = string(providerid, "%06.0f")
 drop providerid
