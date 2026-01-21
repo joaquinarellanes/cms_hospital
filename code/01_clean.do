@@ -1,4 +1,4 @@
-*this code is for the purposes of cleaning cms-hospital data* 
+*this code is for the purposes of cleaning cms-hospital data*
 {
 *initialize
 {
@@ -17,7 +17,7 @@ global data_clean "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jare
 forvalues x = 2005/2025 {
 forvalues y = 1/12 {
 if `x' == 2005 & `y' == 5 {
-import delimited "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/raw/`x'/`y'_`x'/`y'_`x'", clear 
+import delimited "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/raw/`x'/`y'_`x'/`y'_`x'", clear
 
 gen str6 id = string(provider, "%06.0f")
 drop provider
@@ -1270,7 +1270,7 @@ capture confirm string variable providerid
 if _rc { 
 tostring providerid, replace format(%06.0f) force
 }
-replace providerid = string(real(providerid), "%06.0f") if length(providerid)<6
+replace providerid = string(real(providerid), "%06.0f") if length(providerid) < 6
 }
 }
 *create "year_month", "year_quarter", and "year_semester" a variables*
@@ -1303,15 +1303,29 @@ replace providerid = string(real(providerid), "%06.0f") if length(providerid)<6
 }
 *normalize text 
 {
-replace hospitalname = strtrim(itrim(proper(hospitalname)))
-replace countyname   = strtrim(itrim(proper(countyname)))
-replace state = upper(strtrim(state))
-replace hospitaltype = lower(strtrim(hospitaltype))
-replace hospitalownership = lower(strtrim(hospitalownership))	
+	*make case-consistent
+	{
+	replace hospitalname = strtrim(itrim(proper(hospitalname)))
+	replace countyname   = strtrim(itrim(proper(countyname)))
+	replace state = upper(strtrim(state))
+	replace hospitaltype = lower(strtrim(hospitaltype))
+	replace hospitalownership = lower(strtrim(hospitalownership))	
+	}
+	*create cleaned hospital names for matching 
+	{
+	gen hosp_clean = lower(hospitalname)
+	replace hosp_clean = regexr(hosp_clean, "[^a-z0-9 ]", "")
+	replace hosp_clean = subinstr(hosp_clean, "medical center", "mc", .)
+	replace hosp_clean = subinstr(hosp_clean, "center", "ctr", .)
+	replace hosp_clean = subinstr(hosp_clean, "hospital", "hosp", .)
+	replace hosp_clean = itrim(strtrim(hosp_clean))
+	
+	egen hospital_master_id = group(state countyname hosp_clean), label
+	}
 }
 *verify uniqueness and remove any duplicates
 {
-bysort providerid year month: keep if _n==1
+bysort providerid year month: keep if _n == 1
 isid providerid year month
 }
 *add labels for "providerid"
@@ -1326,10 +1340,29 @@ replace countyname = strproper(countyname)
 }
 *clean up variable names
 {
-foreach suf in " County" " Parish" " Borough" " Census Area" " Municipality" " City" {
+foreach suf in " County" " Parish" " Borough" " Census Area" " Municipality" {
 replace countyname = subinstr(countyname, "`suf'", "", .)
 }
 replace countyname = strproper(strtrim(itrim(countyname)))
+replace countyname = subinstr(countyname, "St. ", "St ", .)
+replace countyname = subinstr(countyname, "Saint ", "St ", .)
+rename state state_abbrev
+}
+*fix issues of missing county names
+{
+bysort pid: egen county2 = mode(countyname)
+replace countyname = county2 if missing(countyname)
+drop county2
+
+drop hospital_master_id
+label drop hospital_master_id
+
+drop if missing(countyname)
+}
+*re-generate master id for hospitals
+{
+egen hospital_master_id = group(state countyname hosp_clean), label
+label var hospital_master_id "Stable Hospital ID"	
 }
 *save as temporary file 
 {
@@ -1357,7 +1390,7 @@ clear
 	}
 	*rename "state_abbrev" to "state"
 	{
-	rename state_abbrev state	
+	*rename state_abbrev state	
 	}
 	*change storage type
 	{
@@ -1368,15 +1401,126 @@ clear
 }
 *merge panel with "STATES" program
 {
-merge 1:m state year month using `full_panel'
+merge 1:m state_abbrev year month using `full_panel'
 keep if _merge == 3 
 drop _merge
 }
+*deal with esoteric naming issues
+{
+	replace countyname = "Alexandria City" if countyname == "Alexandria" & state_abbrev == "VA"
+	replace countyname = "Bristol City" if countyname == "Bristol" & state_abbrev == "VA"
+	replace countyname = "Salem City" if countyname == "Salem" & state_abbrev == "VA"
+	replace countyname = "Buena Vista City" if countyname == "Buena Vista" & state_abbrev == "VA"
+	replace countyname = "Charlottesville City" if countyname == "Charlottesville" & state_abbrev == "VA"
+	replace countyname = "Winchester City" if countyname == "Winchester" & state_abbrev == "VA"
+	replace countyname = "Chesapeake City" if countyname == "Chesapeake" & state_abbrev == "VA"
+	replace countyname = "Colonial Heights City" if countyname == "Colonial Heights" & state_abbrev == "VA"
+	replace countyname = "Covington City" if countyname == "Covington" & state_abbrev == "VA"
+	replace countyname = "Danville City" if countyname == "Danville" & state_abbrev == "VA"
+	replace countyname = "Emporia City" if countyname == "Emporia" & state_abbrev == "VA"
+	replace countyname = "Falls Church City" if countyname == "Falls Church" & state_abbrev == "VA"
+	replace countyname = "Fredericksburg City" if countyname == "Fredericksburg" & state_abbrev == "VA"
+	replace countyname = "Galax City" if countyname == "Galax" & state_abbrev == "VA"
+	replace countyname = "Hampton City" if countyname == "Hampton" & state_abbrev == "VA"
+	replace countyname = "Harrisonburg City" if countyname == "Harrisonburg" & state_abbrev == "VA"
+	replace countyname = "Hopewell City" if countyname == "Hopewell" & state_abbrev == "VA"
+	replace countyname = "Lexington City" if countyname == "Lexington" & state_abbrev == "VA"
+	replace countyname = "Lynchburg City" if countyname == "Lynchburg" & state_abbrev == "VA"
+	replace countyname = "Manassas Park City" if countyname == "Manassas Park" & state_abbrev == "VA"
+	replace countyname = "Martinsville City" if countyname == "Martinsville" & state_abbrev == "VA"
+	replace countyname = "Newport News City" if countyname == "Newport News" & state_abbrev == "VA"
+	replace countyname = "Norfolk City" if countyname == "Norfolk" & state_abbrev == "VA"
+	replace countyname = "Norton City" if countyname == "Norton" & state_abbrev == "VA"
+	replace countyname = "Petersburg City" if countyname == "Petersburg" & state_abbrev == "VA"
+	replace countyname = "Portsmouth City" if countyname == "Portsmouth" & state_abbrev == "VA"
+	replace countyname = "Radford City" if countyname == "Radford" & state_abbrev == "VA"
+	replace countyname = "Skagway-Hoonah-Angoon" if countyname == "Skagway" & state_abbrev == "AK"
+	replace countyname = "Staunton City" if countyname == "Staunton" & state_abbrev == "VA"
+	replace countyname = "Suffolk City" if countyname == "Suffolk" & state_abbrev == "VA"
+	replace countyname = "Virginia Beach City" if countyname == "Virginia Beach" & state_abbrev == "VA"
+	replace countyname = "Waynesboro City" if countyname == "Waynesboro" & state_abbrev == "VA"
+	replace countyname = "Williamsburg City" if countyname == "Williamsburg" & state_abbrev == "VA"
+	replace countyname = "Wrangell-Petersburg" if (countyname == "Wrangell" | countyname == "Wrangell and City") & state_abbrev == "AK"
+	replace countyname = "Wrangell-Petersburg" if countyname == "Petersburg" & state_abbrev == "AK"
+	replace countyname = "Matanuska-Susitna" if countyname == "Matanuska Susitna" & state_abbrev == "AK"
+	replace countyname = "North Slope" if countyname == "North Slope Borouh" & state_abbrev == "AK"
+	replace countyname = "Dekalb" if countyname == "De Kalb" & state_abbrev == "AL"
+	replace countyname = "St Tammany" if countyname == "Saint Tammany" & state_abbrev == "LA"
+	replace countyname = "St Mary" if countyname == "Saint Mary" & state_abbrev == "LA"
+	replace countyname = "St James" if countyname == "Saint James" & state_abbrev == "LA"
+	replace countyname = "St Martin" if countyname == "Saint Martin" & state_abbrev == "LA"
+	replace countyname = "St Landry" if countyname == "Saint Landry" & state_abbrev == "LA"
+	replace countyname = "St Charles" if countyname == "Saint Charles" & state_abbrev == "LA"
+	replace countyname = "St Bernard" if countyname == "Saint Bernard" & state_abbrev == "LA"
+	replace countyname = "St Helena" if countyname == "Saint Helena" & state_abbrev == "LA"
+	replace countyname = "St Mary's" if countyname == "Saint Marys" & state_abbrev == "MD"
+	replace countyname = "St Joseph" if countyname == "Saint Joseph" & state_abbrev == "MI"
+	replace countyname = "St Clair" if countyname == "Saint Clair" & state_abbrev == "MI"
+	replace countyname = "St Louis" if countyname == "Saint Louis" & state_abbrev == "MN"
+	replace countyname = "St Louis" if countyname == "Saint Louis" & state_abbrev == "MO"
+	replace countyname = "Ste Genevieve" if countyname == "Sainte Genevieve" & state_abbrev == "MO"
+	replace countyname = "St Francois" if countyname == "Saint Francois" & state_abbrev == "MO"
+	replace countyname = "St Charles" if countyname == "Saint Charles" & state_abbrev == "MO"
+	replace countyname = "St Clair" if countyname == "Saint Clair" & state_abbrev == "MO"
+	replace countyname = "St Lawrence" if countyname == "Saint Lawrence" & state_abbrev == "NY"
+	replace countyname = "St Croix" if countyname == "Saint Croix" & state_abbrev == "WI"
+	replace countyname = "St Clair" if countyname == "Saint Clair" & state_abbrev == "AL"
+	replace countyname = "St Francis" if countyname == "Saint Francis" & state_abbrev == "AR"
+	replace countyname = "St Johns" if countyname == "Saint Johns" & state_abbrev == "FL"
+	replace countyname = "St Clair" if countyname == "Saint Clair" & state_abbrev == "IL"
+	replace countyname = "Dekalb" if countyname == "De Kalb" & state_abbrev == "GA"
+	replace countyname = "Dekalb" if countyname == "De Kalb" & state_abbrev == "IL"
+	replace countyname = "Dekalb" if countyname == "De Kalb" & state_abbrev == "IN"
+	replace countyname = "Dekalb" if countyname == "De Kalb" & state_abbrev == "TN"
+	replace countyname = "Desoto" if countyname == "De Soto" & state_abbrev == "FL"
+	replace countyname = "Desoto" if countyname == "De Soto" & state_abbrev == "MS"
+	replace countyname = "Dewitt" if countyname == "De Witt" & state_abbrev == "TX"
+	replace countyname = "De Witt" if countyname == "Dewitt" & state_abbrev == "IL"
+	replace countyname = "Dupage" if countyname == "Du Page" & state_abbrev == "IL"
+	replace countyname = "East Baton Rouge" if countyname == "E. Baton Rouge" & state_abbrev == "LA"
+	replace countyname = "Laporte" if countyname == "La Porte" & state_abbrev == "IN"
+	replace countyname = "Lasalle" if countyname == "La Salle" & state_abbrev == "IL"
+	replace countyname = "La Salle" if countyname == "LaSalle" & state_abbrev == "LA"
+	replace countyname = "Yellow Medicine" if countyname == "Yellow Medcine" & state_abbrev == "MN"
+	replace countyname = "Valdez-Cordova" if countyname == "Valdez Cordova" & state_abbrev == "AK"
+	replace countyname = "District of Columbia" if countyname == "The District" & state_abbrev == "DC"
+	replace countyname = "Prince George's" if countyname == "Prince Georges" & state_abbrev == "MD"
+	replace countyname = "O'brien" if countyname == "Obrien" & state_abbrev == "IA"
+	replace countyname = "Northwest Arctic" if countyname == "Northwest Artic" & state_abbrev == "AK"
+	replace countyname = "Northumberland" if countyname == "Northumberlnd" & state_abbrev == "PA"
+	replace countyname = "Mcpherson" if countyname == "Mc Pherson" & state_abbrev == "SD"
+	replace countyname = "Mcminn" if countyname == "Mc Minn" & state_abbrev == "TN"
+	replace countyname = "Mcleod" if countyname == "Mc Leod" & state_abbrev == "MN"
+	replace countyname = "Mclennan" if countyname == "Mc Lennan" & state_abbrev == "TX"
+	replace countyname = "Mclean" if countyname == "Mc Lean" & state_abbrev == "IL"
+	replace countyname = "Mckean" if countyname == "Mc Kean" & state_abbrev == "PA"
+	replace countyname = "Mchenry" if countyname == "Mc Henry" & state_abbrev == "IL"
+	replace countyname = "Yukon-Koyukuk" if countyname == "Yukon Koyukuk" & state_abbrev == "MA"
+	replace countyname = "Wrangell-Petersburg" if countyname == "Wrangell Petersburg" & state_abbrev == "AK"
+	replace countyname = "St Mary's" if countyname == "St Marys" & state_abbrev == "MD"
+	replace countyname = "St John the Baptist" if countyname == "St John Baptist" & state_abbrev == "LA"
+	replace countyname = "Scotts Bluff" if countyname == "Scott Bluff" & state_abbrev == "NE"
+	replace countyname = "Mcduffie" if countyname == "Mc Duffie" & state_abbrev == "GA"
+	replace countyname = "Mcdowell" if countyname == "Mc Dowell" & state_abbrev == "NC"
+	replace countyname = "Mcdonough" if countyname == "Mc Donough" & state_abbrev == "IL"
+	replace countyname = "Mcculloch" if countyname == "Mc Culloch" & state_abbrev == "TX"
+	replace countyname = "Mccracken" if countyname == "Mc Cracken" & state_abbrev == "KY"
+	replace countyname = "Le Flore" if countyname == "Leflore" & state_abbrev == "OK"
+	replace countyname = "La Salle" if countyname == "Lasalle" & state_abbrev == "LA"
+	replace countyname = "La Paz" if countyname == "Lapaz" & state_abbrev == "AZ"
+	replace countyname = "Lake of the Woods" if countyname == "Lake Of Woods" & state_abbrev == "MN"
+	replace countyname = "Jefferson Davis" if countyname == "Jeffrson Davis" & state_abbrev == "LA"
+	replace countyname = "Ste Genevieve" if countyname == "Ste. Genevieve" & state_fips == 29
+}
 *merge in county fips codes
 {
-countyfips, name(countyname) statefips(state_fips)	
-keep if _merge == 3 
+countyfips, name(countyname) statefips(state_fips)
+keep if _merge == 3
 drop _merge 
+}
+*rename variables
+{
+rename state_abbrev state	
 }
 *generate stocks and flows*
 {
@@ -1388,7 +1532,7 @@ drop _merge
 	}
 	*keep one hospital per year-month 
 	{
-	bysort providerid year_month: keep if _n==1
+	bysort pid year_month: keep if _n == 1
 	}
 	*account for left/right-censoring
 	{
@@ -1398,8 +1542,8 @@ drop _merge
 	}
 	*create "first_seen" and "last_seen"
 	{
-	bysort providerid (year_month): gen byte first_seen = year_month ==year_month[1]
-	bysort providerid (year_month): gen byte last_seen  = year_month ==year_month[_N]
+	bysort pid (year_month): gen byte first_seen = year_month == year_month[1]
+	bysort pid (year_month): gen byte last_seen  = year_month == year_month[_N]
 	}
 	*create event flags 
 	{
@@ -1410,20 +1554,19 @@ drop _merge
 	{
 	cap drop county_hosp_present county_openings county_closures
 	
-	isid providerid year month
+	isid pid year_month
 
-	bys state_fips county_fips year month: gen county_hosp_present = _N
-
-	bys state_fips county_fips year month: egen county_openings = total(opened)
-	bys state_fips county_fips year month: egen county_closures = total(closed)
+	bys state_fips county_fips year_month: gen county_hosp_present = _N
+	bys state_fips county_fips year_month: egen county_openings = total(opened)
+	bys state_fips county_fips year_month: egen county_closures = total(closed)
 
 	label var county_hosp_present "Hospitals present in county this month"
-	label var county_openings     "Hospital openings in county this month"
-	label var county_closures     "Hospital closures in county this month"
+	label var county_openings "Hospital openings in county this month"
+	label var county_closures "Hospital closures in county this month"
 
 	preserve
-	keep state_fips county_fips year month pid opened closed
-	collapse (count) hosp_present = pid ///
+	keep state_fips county_fips year month year_month pid opened closed
+	gcollapse (count) hosp_present = pid ///
 	(sum) openings = opened closures = closed, ///
 	by(state_fips county_fips year month)
 	save "$data_clean/county_month_counts.dta", replace
@@ -1432,12 +1575,12 @@ drop _merge
 	}
 	*create end-of-year stock
 	{
-	bys providerid year (year_month): replace county_fips = county_fips[_N] if missing(county_fips)
-	bys providerid year (year_month): replace state_fips = state_fips[_N] if missing(state_fips)
+	bys pid year (year_month): replace county_fips = county_fips[_N] if missing(county_fips)
+	bys pid year (year_month): replace state_fips = state_fips[_N] if missing(state_fips)
 	bysort state_fips county_fips year (year_month): gen eoy_snapshot = year_month[_N]
 	gen byte at_eoy = (year_month == eoy_snapshot)
 	label var at_eoy "Hospital present at county's year-end snapshot"
-	bys providerid year (year_month): gen byte __prov_eoy = _n == _N
+	bys pid year (year_month): gen byte __prov_eoy = _n == _N
 	replace at_eoy = at_eoy & __prov_eoy
 
 	}
@@ -1451,7 +1594,7 @@ drop _merge
 	*conduct county-year analysis
 	{
 	preserve
-    collapse (sum) stock=at_eoy flows_in=opened flows_out=closed, ///
+    gcollapse (sum) stock = at_eoy flows_in=opened flows_out=closed, ///
              by(state_fips county_fips year)
     order state_fips county_fips year stock flows_in flows_out
     sort  state_fips county_fips year
@@ -1462,7 +1605,7 @@ restore
 	*conduct state-year analysis
 	{
 	preserve
-    collapse (sum) stock=at_eoy flows_in=opened flows_out=closed, by(state_fips year)
+    gcollapse (sum) stock = at_eoy flows_in=opened flows_out=closed, by(state_fips year)
     order state_fips year stock flows_in flows_out
     sort  state_fips year
     save "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/clean/hospital_flows_state_year.dta", replace
@@ -1472,7 +1615,7 @@ restore
 	*conduct national-year analysis
 	{
 	preserve
-    collapse (sum) stock=at_eoy flows_in=opened flows_out=closed, by(year)
+    gcollapse (sum) stock=at_eoy flows_in=opened flows_out=closed, by(year)
 
 		*validation: Δstock vs (flows_in − flows_out)
 		{
@@ -1502,8 +1645,8 @@ restore
     *build EOY stock and flows, then aggregate to year:
     bysort state_fips county_fips year (year_month): gen __eoy = year_month[_N]
     gen byte __at_eoy = (year_month==__eoy)
-    bysort providerid (year_month): gen byte __first = year_month==year_month[1]
-    bysort providerid (year_month): gen byte __last  = year_month==year_month[_N]
+    bysort pid (year_month): gen byte __first = year_month==year_month[1]
+    bysort pid (year_month): gen byte __last  = year_month==year_month[_N]
 
     su year_month, meanonly
     local __ymin = r(min)
@@ -1511,7 +1654,7 @@ restore
     gen byte __opened = __first & year_month > `__ymin'
     gen byte __closed = __last  & year_month < `__ymax'
 
-    collapse (sum) stock=__at_eoy flows_in=__opened flows_out=__closed, by(year)
+    gcollapse (sum) stock=__at_eoy flows_in=__opened flows_out=__closed, by(year)
 
     tsset year
     gen net = flows_in - flows_out
@@ -1542,17 +1685,17 @@ restore
 	{
 	preserve
     * Monthly stock (active) and flows from the monthly panel
-    bysort providerid year_month: keep if _n==1
+    bysort pid year_month: keep if _n==1
     su year_month, meanonly
     local __ymin = r(min)
     local __ymax = r(max)
-    bysort providerid (year_month): gen byte __first = year_month==year_month[1]
-    bysort providerid (year_month): gen byte __last  = year_month==year_month[_N]
+    bysort pid (year_month): gen byte __first = year_month==year_month[1]
+    bysort pid (year_month): gen byte __last  = year_month==year_month[_N]
     gen byte __opened = __first & year_month > `__ymin'
     gen byte __closed = __last  & year_month < `__ymax'
     gen byte __active = 1
 
-    collapse (sum) active=__active opened=__opened closed=__closed, by(year_month)
+    gcollapse (sum) active=__active opened=__opened closed=__closed, by(year_month)
     tsset year_month, monthly
 
     * (Optional) 3-mo smoother for the stock line
@@ -1580,9 +1723,9 @@ restore
 	preserve
     * Build county-year EOY stock, then get top-10 states at the latest year
     bysort state_fips county_fips year (year_month): gen __eoy = year_month[_N]
-    gen byte __at_eoy = (year_month==__eoy)
-    bysort providerid (year_month): gen byte __first = year_month==year_month[1]
-    bysort providerid (year_month): gen byte __last  = year_month==year_month[_N]
+    gen byte __at_eoy = (year_month == __eoy)
+    bysort pid (year_month): gen byte __first = year_month == year_month[1]
+    bysort pid (year_month): gen byte __last  = year_month == year_month[_N]
     su year_month, meanonly
     local __ymin = r(min)
     local __ymax = r(max)
@@ -1590,14 +1733,14 @@ restore
     gen byte __closed = __last  & year_month < `__ymax'
 
     * State-year series
-    collapse (sum) stock=__at_eoy flows_in=__opened flows_out=__closed, by(state_fips year)
+    gcollapse (sum) stock=__at_eoy flows_in=__opened flows_out=__closed, by(state_fips year)
 
     * Identify top 10 states by stock in the latest year
     su year, meanonly
-    keep if year==r(max)
+    keep if year == r(max)
     gsort -stock
     gen __rank = _n
-    keep if __rank<=10
+    keep if __rank <= 10
     levelsof state_fips, local(top10)
 	restore
 
@@ -1609,15 +1752,15 @@ restore
 	* Recompute EOY/flows for this state to be safe
 	bysort state_fips county_fips year (year_month): gen __eoy = year_month[_N]
 	gen byte __at_eoy = (year_month==__eoy)
-	bysort providerid (year_month): gen byte __first = year_month==year_month[1]
-	bysort providerid (year_month): gen byte __last  = year_month==year_month[_N]
+	bysort pid (year_month): gen byte __first = year_month == year_month[1]
+	bysort pid (year_month): gen byte __last  = year_month == year_month[_N]
 	su year_month, meanonly
 	local __ymin = r(min)
 	local __ymax = r(max)
 	gen byte __opened = __first & year_month > `__ymin'
 	gen byte __closed = __last  & year_month < `__ymax'
 
-	collapse (sum) stock=__at_eoy flows_in=__opened flows_out=__closed, by(year)
+	gcollapse (sum) stock=__at_eoy flows_in=__opened flows_out = __closed, by(year)
 
 	tsset year
 	gen net = flows_in - flows_out
@@ -1644,19 +1787,19 @@ restore
 *monthly identity check
 {
 preserve
-bysort providerid year_month: keep if _n==1
+bysort pid year_month: keep if _n == 1
 
 su year_month, meanonly
 local ymin = r(min)
 local ymax = r(max)
 
-bysort providerid (year_month): gen byte __first = year_month==year_month[1]
-bysort providerid (year_month): gen byte __last = year_month==year_month[_N]
+bysort pid (year_month): gen byte __first = year_month == year_month[1]
+bysort pid (year_month): gen byte __last = year_month == year_month[_N]
 gen byte __opened = __first & year_month > `ymin'
 gen byte __closed = __last & year_month < `ymax'
 
 gen byte __active = 1
-collapse (sum) active=__active opened=__opened closed=__closed, by(year_month)
+gcollapse (sum) active = __active opened = __opened closed = __closed, by(year_month)
 
 tsset year_month
 gen d_active = D.active
@@ -1666,6 +1809,7 @@ restore
 *label variables
 {
 label var providerid "Provider ID"
+label var hospital_master_id "Hospital Master ID"
 label var hospitalname "Hospital Name"
 label var state "State Abbreviation"
 label var year "Year"
@@ -1690,11 +1834,11 @@ label var state_name "State Name"
 }
 *keep necessary variables
 {
-keep state_fips state state_name year month quarter providerid hospitalname countyname year_month first_seen last_seen opened closed at_eoy semester hospitaltype hospitalownership year_quarter year_semester pid __prov_eoy county_fips 
+keep state_fips state state_name year month quarter providerid hospitalname countyname hospital_master_id year_month first_seen last_seen opened closed at_eoy semester hospitaltype hospitalownership year_quarter year_semester pid __prov_eoy county_fips 
 }
 *re-sort and re-order data*
 {
-gsort +providerid +year +month +quarter +semester +year_month +year_quarter +year_semester
+gsort +hospital_master_id +providerid +year +month +quarter +semester +year_month +year_quarter +year_semester
 order providerid hospitalname state countyname state_fips county_fips year quarter month semester hospitaltype hospitalownership year_month year_quarter year_semester
 replace countyname = strproper(countyname)
 }
@@ -1707,6 +1851,60 @@ replace countyname = strproper(countyname)
 	*.csv
 	{
 	export delimited "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/clean/hospital_panel_2005to2025.csv", replace	
+	}
+}
+*map out trends 
+{
+	*load in county-level data
+	{
+	use "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/clean/hospital_flows_county_year.dta", clear	
+	}
+	*make county-level maps
+	{
+	foreach y of numlist 2005/2023 {
+	preserve
+	keep if year == `y'
+	gen county = state_fips*1000 + county_fips
+	format county %05.0f
+	maptile stock, geo(county2010) ///
+	cutvalues(1 2 3 4 5 6 7 8 9 10)
+	graph export "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/clean/hosp_present_county_`y'.png", replace width(2000)
+    restore
+	}
+	}
+	*load in state-level data
+	{
+	use "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/clean/hospital_flows_state_year.dta", clear	
+	}
+	*make state-level maps
+	{
+	foreach y of numlist 2005/2023 {
+	preserve
+	keep if year == `y'
+	gen state = state_fips
+	rename state_fips statefips
+	maptile stock, geograph(state) geoid(statefips) ///
+	cutvalues(30 60 90 120 150 180 210)
+	graph export "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/clean/hosp_present_state_`y'.png", replace width(2000) 
+    restore
+	}
+	}
+}
+*make time series graph of total hospitals
+{
+	*load in hospital panel
+	{
+	use "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/clean/hospital_panel_2005to2025.dta", clear	
+	}
+	*plot time series graph
+	{
+	preserve 
+	set scheme s1color
+	gcollapse (count) pid, by(year_month)
+	tsset pid year_month
+	twoway scatter pid year_month
+	graph export "/Users/joaquinarellanes/Library/CloudStorage/GoogleDrive-jarellanes8318@sdsu.edu/My Drive/joaquin/research/datasets/public/health/hospital/clean/hosp_trends.png", replace
+	restore
 	}
 }
 }
